@@ -25,16 +25,17 @@ def main():
         for row in reader:
             calib_map.append(tuple(int(item) for item in row))
 
-    x_start = -10
-    x_end = 25
-    y_ground = -130
-    lift = 50
+    x_start = -30
+    x_end = 35
+    y_ground = -145
+    lift = 45
 
     # Move to the initial position
     hip_angle = utils.find_best_servo_pair(x_start, y_ground, calib_map)["hip"]
     knee_angle = utils.find_best_servo_pair(x_start, y_ground, calib_map)["knee"]
     legs_position = {0: hip_angle, 1: knee_angle, 3: hip_angle, 4: knee_angle, 6: hip_angle, 7: knee_angle, 9: hip_angle, 10: knee_angle}
     utils.move(kit, legs_position, 100)
+    time.sleep(1)
 
     legs = [
         {"hip": 0,  "knee": 1},
@@ -51,7 +52,7 @@ def main():
     swing = utils.swing_trajectory(x_start, x_end, y_ground, lift, steps=15)
     stance = utils.stance_trajectory(x_end, x_start, y_ground, steps=15)
 
-    for _ in range(4):
+    for _ in range(7):
         # --- Phase A ---
         for i in range(len(swing)):
             servo_targets = {}
@@ -59,8 +60,6 @@ def main():
             for leg_id, leg in enumerate(legs):
                 if leg_id in group_A:
                     x, y = swing[i]
-                    if leg_id in RIGHT_LEGS:
-                        x = -x
                 else:
                     x, y = stance[i]
 
@@ -78,8 +77,6 @@ def main():
             for leg_id, leg in enumerate(legs):
                 if leg_id in group_B:
                     x, y = swing[i]
-                    if leg_id in RIGHT_LEGS:
-                        x = -x
                 else:
                     x, y = stance[i]
 
@@ -90,30 +87,11 @@ def main():
 
             utils.move(kit, servo_targets, 100)
 
+    # Back to default
+    time.sleep(1)
     legs_position = {0: hip_angle, 1: knee_angle, 3: hip_angle, 4: knee_angle, 6: hip_angle, 7: knee_angle, 9: hip_angle, 10: knee_angle}
     utils.move(kit, legs_position, 100)
     utils.move_servos_to_default_position(kit)
-
-    #for i in range(3):
-    #    trajectory = utils.swing_trajectory(x_start = x_start, x_end = x_end, y_ground = y_ground, lift = lift, steps = 15)
-    #    for x, y in trajectory:
-    #        best = utils.find_best_servo_pair(x, y, calib_map)
-    #        servo_targets = {
-    #            HIP: best["hip"],
-    #            KNEE: best["knee"]
-    #        }
-    #        utils.move(kit, servo_targets, 70)
-
-    #    trajectory = utils.stance_trajectory(x_end, x_start, y_ground, steps=5)
-    #    for x, y in trajectory:
-    #        best = utils.find_best_servo_pair(x, y, calib_map)
-    #        servo_targets = {
-    #            HIP: best["hip"],
-    #            KNEE: best["knee"]
-    #        }
-    #        utils.move(kit, servo_targets, 80)
-
-# === #
 
 if __name__ == "__main__":
     main()

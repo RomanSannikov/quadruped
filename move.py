@@ -23,13 +23,3 @@ for i in range(1, len(sys.argv), 2):
 
 utils.move(kit, servos, 100)
 time.sleep(1)
-
-#init_angles = {0: 90, 3: 90, 6: 90, 9: 90}
-#utils.move(kit, init_angles,  70)
-#time.sleep(1)
-
-#utils.move(kit, servos, 70)
-#time.sleep(1)
-
-#utils.move(kit, init_angles,  100)
-

@@ -94,22 +94,56 @@ def move(kit, servo_targets, speed):
 
 
 def find_best_servo_pair(x_target, y_target, calib_map):
-    best = None
-    best_dist2 = float("inf")
-
+    """Find servo angles using inverse distance weighting interpolation.
+    
+    Uses the 4 nearest calibration points and interpolates based on inverse distance.
+    This provides smoother transitions than nearest-neighbor lookup.
+    """
+    # Calculate distances to all calibration points
+    distances = []
     for hip, knee, x, y in calib_map:
-        dist2 = (x - x_target)**2 + (y - y_target)**2
-        if dist2 < best_dist2:
-            best_dist2 = dist2
-            best = {
-                "hip": hip,
-                "knee": knee,
-                "x": x,
-                "y": y,
-                "distance": math.sqrt(dist2)
-            }
+        dist = math.sqrt((x - x_target)**2 + (y - y_target)**2)
+        distances.append((dist, hip, knee, x, y))
+    
+    # Sort by distance and get the 4 closest points
+    distances.sort(key=lambda d: d[0])
+    nearest = distances[:4]
 
-    return best
+    # If we're very close to a calibration point, just use it
+    if nearest[0][0] < 0.1:
+        return {
+            "hip": nearest[0][1],
+            "knee": nearest[0][2],
+            "x": nearest[0][3],
+            "y": nearest[0][4],
+            "distance": nearest[0][0]
+        }
+    
+    # Inverse distance weighting (Shepard's method)
+    # Use power of 2 for the weight (inverse square law)
+    weights = []
+    for dist, hip, knee, x, y in nearest:
+        if dist < 0.001:  # Avoid division by zero
+            weight = 1000000
+        else:
+            weight = 1.0 / (dist ** 2)
+        weights.append(weight)
+    
+    # Normalize weights
+    total_weight = sum(weights)
+    weights = [w / total_weight for w in weights]
+    
+    # Interpolate hip and knee angles
+    hip_interp = sum(w * pt[1] for w, pt in zip(weights, nearest))
+    knee_interp = sum(w * pt[2] for w, pt in zip(weights, nearest))
+    
+    return {
+        "hip": round(hip_interp),
+        "knee": round(knee_interp),
+        "x": x_target,
+        "y": y_target,
+        "distance": nearest[0][0]
+    }
 
 
 def move_servos_to_default_position(kit, speed=70):
