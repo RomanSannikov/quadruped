@@ -22,7 +22,7 @@ for i in range(1, len(sys.argv), 2):
     servos.append({servo_n: angle})
 
 if not len(servos): # Defaults
-    utils.move_servos_to_default_position(kit, speed=100)
+    utils.move_servos_to_default_position(kit)
 else: # User defined
     print("Actual angles:")
     for item in servos:

@@ -2,26 +2,33 @@ from adafruit_servokit import ServoKit
 import time
 import math
 
+HIP_DEFAULT_ANGLE = 90
+KNEE_DEFAULT_ANGLE = 60
+ABDUCTION_DEFAULT_ANGLE = 95
+
 SERVO_CAL = {
     # n: (direction, center)
+    # hip
+    # knee
+    # abduction
 
     # left legs
-    0: ( 1, 90),   # hip example
-    1: ( 1, 60),   # knee
-    2: ( 1, 95),
+    0: ( 1, HIP_DEFAULT_ANGLE - 5),
+    1: ( 1, KNEE_DEFAULT_ANGLE + 5),
+    2: ( 1, ABDUCTION_DEFAULT_ANGLE),
 
-    6: ( 1, 90),
-    7: ( 1, 60),
-    8: ( 1, 95),
+    6: ( 1, HIP_DEFAULT_ANGLE),
+    7: ( 1, KNEE_DEFAULT_ANGLE),
+    8: ( 1, ABDUCTION_DEFAULT_ANGLE - 10),
 
     # right legs (mirrored)
-    3: (-1, 90),
-    4: (-1, 60),
-    5: ( 1, 95),
+    3: (-1, HIP_DEFAULT_ANGLE),
+    4: (-1, KNEE_DEFAULT_ANGLE),
+    5: ( 1, ABDUCTION_DEFAULT_ANGLE),
 
-    9: (-1, 90),
-    10:(-1, 60),
-    11:( 1, 95),
+    9: (-1, HIP_DEFAULT_ANGLE),
+    10:(-1, KNEE_DEFAULT_ANGLE),
+    11:( 1, ABDUCTION_DEFAULT_ANGLE),
 }
 
 
@@ -93,6 +100,14 @@ def move(kit, servo_targets, speed):
         time.sleep(delay)
 
 
+def raw_move(kit, servo_targets):
+    """Directly set servos to target positions without interpolation."""
+    for n in servo_targets:
+        kit.servo[n].angle = servo_targets[n]
+        print(f"Actual default angle: {servo_targets[n]}")
+        time.sleep(0.5)
+
+
 def find_best_servo_pair(x_target, y_target, calib_map):
     """Find servo angles using inverse distance weighting interpolation.
     
@@ -146,14 +161,13 @@ def find_best_servo_pair(x_target, y_target, calib_map):
     }
 
 
-def move_servos_to_default_position(kit, speed=70):
+def move_servos_to_default_position(kit):
     default_positions = {}
-    for i in range(0, 12, 3):
-        default_positions[i] = 90      # hip
-        default_positions[i + 1] = 60  # knee
-        default_positions[i + 2] = 95  # abduction
-    
-    move(kit, default_positions, speed)
+    for i in range(12):
+        _, center = SERVO_CAL[i]
+        default_positions[i] = center
+
+    raw_move(kit, default_positions)
 
 
 def init_servos(kit):
