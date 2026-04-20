@@ -9,7 +9,7 @@ def init():
     kit = ServoKit(channels=16)
 
     utils.init_servos(kit)
-    utils.move_servos_to_default_position(kit)
+    utils.move_servos_to_default_position(kit, at_once=True)
 
     time.sleep(1)
 
@@ -25,11 +25,9 @@ def main():
         for row in reader:
             calib_map.append(tuple(int(item) for item in row))
 
-    x_start = -30
-    x_end = 35
-    y_ground = -145
-    lift = 45
+    trot(kit, calib_map, x_start=-20, x_end=20, y_ground=-165, lift=30)
 
+def trot(kit, calib_map, x_start, x_end, y_ground, lift):
     # Move to the initial position
     hip_angle = utils.find_best_servo_pair(x_start, y_ground, calib_map)["hip"]
     knee_angle = utils.find_best_servo_pair(x_start, y_ground, calib_map)["knee"]
@@ -44,10 +42,8 @@ def main():
         {"hip": 9,  "knee": 10},
     ]
 
-    group_A = [0, 3]
-    group_B = [1, 2]
-
-    RIGHT_LEGS = {1, 3}
+    group_A = [0, 2]
+    group_B = [1, 3]
 
     swing = utils.swing_trajectory(x_start, x_end, y_ground, lift, steps=15)
     stance = utils.stance_trajectory(x_end, x_start, y_ground, steps=15)
@@ -91,7 +87,7 @@ def main():
     time.sleep(1)
     legs_position = {0: hip_angle, 1: knee_angle, 3: hip_angle, 4: knee_angle, 6: hip_angle, 7: knee_angle, 9: hip_angle, 10: knee_angle}
     utils.move(kit, legs_position, 100)
-    utils.move_servos_to_default_position(kit)
+    utils.move_servos_to_default_position(kit, at_once=True)
 
 if __name__ == "__main__":
     main()

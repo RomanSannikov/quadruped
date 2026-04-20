@@ -6,6 +6,8 @@ HIP_DEFAULT_ANGLE = 90
 KNEE_DEFAULT_ANGLE = 60
 ABDUCTION_DEFAULT_ANGLE = 95
 
+DEFAULT_LOGICAL_CENTER = [HIP_DEFAULT_ANGLE, KNEE_DEFAULT_ANGLE, ABDUCTION_DEFAULT_ANGLE]
+
 SERVO_CAL = {
     # n: (direction, center)
     # hip
@@ -14,21 +16,21 @@ SERVO_CAL = {
 
     # left legs
     0: ( 1, HIP_DEFAULT_ANGLE - 5),
-    1: ( 1, KNEE_DEFAULT_ANGLE + 5),
+    1: ( 1, KNEE_DEFAULT_ANGLE),
     2: ( 1, ABDUCTION_DEFAULT_ANGLE),
 
-    6: ( 1, HIP_DEFAULT_ANGLE),
-    7: ( 1, KNEE_DEFAULT_ANGLE),
-    8: ( 1, ABDUCTION_DEFAULT_ANGLE - 10),
+    9: ( 1, HIP_DEFAULT_ANGLE - 3),
+    10:( 1, KNEE_DEFAULT_ANGLE - 5),
+    11:( 1, ABDUCTION_DEFAULT_ANGLE - 10),
 
     # right legs (mirrored)
-    3: (-1, HIP_DEFAULT_ANGLE),
-    4: (-1, KNEE_DEFAULT_ANGLE),
+    3: (-1, HIP_DEFAULT_ANGLE + 5),
+    4: (-1, KNEE_DEFAULT_ANGLE + 3),
     5: ( 1, ABDUCTION_DEFAULT_ANGLE),
 
-    9: (-1, HIP_DEFAULT_ANGLE),
-    10:(-1, KNEE_DEFAULT_ANGLE),
-    11:( 1, ABDUCTION_DEFAULT_ANGLE),
+    6: (-1, HIP_DEFAULT_ANGLE + 5),
+    7: (-1, KNEE_DEFAULT_ANGLE - 5),
+    8: ( 1, ABDUCTION_DEFAULT_ANGLE),
 }
 
 
@@ -54,7 +56,8 @@ def stance_trajectory(x_start, x_end, y_ground, steps):
 
 def logical_to_hardware(n, angle):
     direction, center = SERVO_CAL[n]
-    return center + direction * (angle - center)
+    logical_center = DEFAULT_LOGICAL_CENTER[n % 3]
+    return center + direction * (angle - logical_center)
 
 
 def move(kit, servo_targets, speed):
@@ -161,13 +164,19 @@ def find_best_servo_pair(x_target, y_target, calib_map):
     }
 
 
-def move_servos_to_default_position(kit):
-    default_positions = {}
+def move_servos_to_default_position(kit, at_once = False):
+    default_hardware_positions = {}
+    default_software_positions = {}
+
     for i in range(12):
         _, center = SERVO_CAL[i]
-        default_positions[i] = center
+        default_hardware_positions[i] = center
+        default_software_positions[i] = DEFAULT_LOGICAL_CENTER[i % 3]
 
-    raw_move(kit, default_positions)
+    if at_once:
+        move(kit, default_software_positions, speed=100)
+    else:
+        raw_move(kit, default_hardware_positions)
 
 
 def init_servos(kit):
