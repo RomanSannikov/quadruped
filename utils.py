@@ -1,6 +1,6 @@
-from adafruit_servokit import ServoKit
 import time
 import math
+import csv
 
 HIP_DEFAULT_ANGLE = 90
 KNEE_DEFAULT_ANGLE = 60
@@ -184,3 +184,13 @@ def init_servos(kit):
     for i in range(12):
         kit.servo[i].set_pulse_width_range(500, 2500)
         kit.servo[i].actuation_range = 180
+
+
+def read_calibration_data():
+    calib_map = []
+    with open("servo_to_foot.csv", "r") as file:
+        reader = csv.reader(file)
+        next(reader)
+        for row in reader:
+            calib_map.append(tuple(int(item) for item in row))
+    return calib_map

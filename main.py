@@ -1,6 +1,5 @@
 from adafruit_servokit import ServoKit
 import time
-import csv
 
 import utils
 
@@ -17,13 +16,7 @@ def init():
 
 def main():
     kit = init()
-
-    calib_map = []
-    with open("servo_to_foot.csv", "r") as file:
-        reader = csv.reader(file)
-        next(reader)
-        for row in reader:
-            calib_map.append(tuple(int(item) for item in row))
+    calib_map = utils.read_calibration_data()
 
     # trot(kit, calib_map, x_start=-20, x_end=20, y_ground=-165, lift=30, steps=5)
     crawl(kit, calib_map, x_start=-20, x_end=20, y_ground=-165, lift=30, steps=5)
