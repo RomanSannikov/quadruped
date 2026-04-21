@@ -21,7 +21,7 @@ SERVO_CAL = {
 
     9: ( 1, HIP_DEFAULT_ANGLE - 3),
     10:( 1, KNEE_DEFAULT_ANGLE - 5),
-    11:( 1, ABDUCTION_DEFAULT_ANGLE - 10),
+    11:(-1, ABDUCTION_DEFAULT_ANGLE - 10),
 
     # right legs (mirrored)
     3: (-1, HIP_DEFAULT_ANGLE + 5),
@@ -30,7 +30,7 @@ SERVO_CAL = {
 
     6: (-1, HIP_DEFAULT_ANGLE + 5),
     7: (-1, KNEE_DEFAULT_ANGLE - 5),
-    8: ( 1, ABDUCTION_DEFAULT_ANGLE),
+    8: (-1, ABDUCTION_DEFAULT_ANGLE),
 }
 
 
