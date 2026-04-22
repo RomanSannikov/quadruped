@@ -1,21 +1,10 @@
-from adafruit_servokit import ServoKit
 import time
 
 import utils
 
-def init():
-    kit = ServoKit(channels=16)
-
-    utils.init_servos(kit)
-    utils.move_servos_to_default_position(kit, at_once=True)
-
-    time.sleep(1)
-
-    return kit
-
 
 def main():
-    kit = init()
+    kit = utils.init()
     calib_map = utils.read_calibration_data()
 
     # trot(kit, calib_map, x_start=-20, x_end=20, y_ground=-165, lift=30, steps=5)

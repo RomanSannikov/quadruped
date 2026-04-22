@@ -2,6 +2,8 @@ import time
 import math
 import csv
 
+from adafruit_servokit import ServoKit
+
 HIP_DEFAULT_ANGLE = 90
 KNEE_DEFAULT_ANGLE = 60
 ABDUCTION_DEFAULT_ANGLE = 95
@@ -184,6 +186,17 @@ def init_servos(kit):
     for i in range(12):
         kit.servo[i].set_pulse_width_range(500, 2500)
         kit.servo[i].actuation_range = 180
+
+
+def init():
+    kit = ServoKit(channels=16)
+
+    init_servos(kit)
+    move_servos_to_default_position(kit, at_once=True)
+
+    time.sleep(1)
+
+    return kit
 
 
 def read_calibration_data():
