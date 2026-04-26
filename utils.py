@@ -36,20 +36,20 @@ SERVO_CAL = {
 }
 
 
-def swing_trajectory(x_start, x_end, y_ground, lift, steps):
+def swing_trajectory(x_start, x_end, y_ground, lift, samples):
     traj = []
-    for i in range(steps):
-        t = i / (steps - 1)
+    for i in range(samples):
+        t = i / (samples - 1)
         x = x_start + (x_end - x_start) * t 
         y = y_ground + lift * math.sin(math.pi * t)
         traj.append((x, y)) 
     return traj
 
 
-def stance_trajectory(x_start, x_end, y_ground, steps):
+def stance_trajectory(x_start, x_end, y_ground, samples):
     traj = []
-    for i in range(steps):
-        t = i / (steps - 1)
+    for i in range(samples):
+        t = i / (samples - 1)
         x = x_start + (x_end - x_start) * t 
         y = y_ground
         traj.append((x, y)) 
@@ -86,19 +86,19 @@ def move(kit, servo_targets, speed):
     # Calculate how far each servo needs to move
     deltas = {n: targets[n] - current[n] for n in servo_targets}
     
-    # Determine number of steps based on largest movement
-    steps = int(max(abs(d) for d in deltas.values()))
-    if steps == 0:
+    # Determine number of samples based on largest movement
+    samples = int(max(abs(d) for d in deltas.values()))
+    if samples == 0:
         return
     
-    # Convert speed (0-100) to delay between steps
+    # Convert speed (0-100) to delay between samples
     speed = max(0, min(100, speed))
     delay = max_delay - (speed / 100) * (max_delay - min_delay)
     
     # Move servos step by step
-    for i in range(1, steps + 1):
+    for i in range(1, samples + 1):
         for n in servo_targets:
-            angle = current[n] + deltas[n] * i / steps
+            angle = current[n] + deltas[n] * i / samples
             # Clamp for safety
             angle = max(0, min(180, angle))
             kit.servo[n].angle = angle
@@ -179,6 +179,94 @@ def move_servos_to_default_position(kit, at_once = False):
         move(kit, default_software_positions, speed=100)
     else:
         raw_move(kit, default_hardware_positions)
+
+
+def standup(kit, calib_map, x_start, y_ground):
+    hip_angle = find_best_servo_pair(x_start, y_ground, calib_map)["hip"]
+    knee_angle = find_best_servo_pair(x_start, y_ground, calib_map)["knee"]
+    legs_position = {0: hip_angle, 1: knee_angle, 3: hip_angle, 4: knee_angle, 6: hip_angle, 7: knee_angle, 9: hip_angle, 10: knee_angle}
+    move(kit, legs_position, 100)
+    return legs_position
+
+
+def laydown(kit, legs_position):
+    move(kit, legs_position, 100)
+    move_servos_to_default_position(kit, at_once=True)
+
+
+def crawl(kit, calib_map, x_start, x_end, y_ground, lift, samples=15):
+    hip_angle = find_best_servo_pair(x_start, y_ground, calib_map)["hip"]
+    knee_angle = find_best_servo_pair(x_start, y_ground, calib_map)["knee"]
+    legs_position = {0: hip_angle, 1: knee_angle, 3: hip_angle, 4: knee_angle, 6: hip_angle, 7: knee_angle, 9: hip_angle, 10: knee_angle}
+
+    legs = [
+        {"hip": 0,  "knee": 1},
+        {"hip": 3,  "knee": 4},
+        {"hip": 6,  "knee": 7},
+        {"hip": 9,  "knee": 10},
+    ]
+
+    swing = swing_trajectory(x_start, x_end, y_ground, lift, samples=samples)
+
+    for leg_id in [0, 2, 1, 3]:
+        for i in range(len(swing)):
+            servo_targets = {}
+            x, y = swing[i]
+            best = find_best_servo_pair(x, y, calib_map)
+            servo_targets[legs[leg_id]["hip"]] = best["hip"]
+            servo_targets[legs[leg_id]["knee"]] = best["knee"]
+            move(kit, servo_targets, 80)
+    time.sleep(0.1)
+    move(kit, legs_position, 100)
+
+
+def trot(kit, calib_map, x_start, x_end, y_ground, lift, samples=15):
+    legs = [
+        {"hip": 0,  "knee": 1},
+        {"hip": 3,  "knee": 4},
+        {"hip": 6,  "knee": 7},
+        {"hip": 9,  "knee": 10},
+    ]
+
+    group_A = [0, 2]
+    group_B = [1, 3]
+
+    swing = swing_trajectory(x_start, x_end, y_ground, lift, samples=samples)
+    stance = stance_trajectory(x_end, x_start, y_ground, samples=samples)
+
+    # --- Phase A ---
+    for i in range(len(swing)):
+        servo_targets = {}
+
+        for leg_id, leg in enumerate(legs):
+            if leg_id in group_A:
+                x, y = swing[i]
+            else:
+                x, y = stance[i]
+
+            best = find_best_servo_pair(x, y, calib_map)
+
+            servo_targets[leg["hip"]] = best["hip"]
+            servo_targets[leg["knee"]] = best["knee"]
+
+        move(kit, servo_targets, 100)
+
+    # --- Phase B ---
+    for i in range(len(swing)):
+        servo_targets = {}
+
+        for leg_id, leg in enumerate(legs):
+            if leg_id in group_B:
+                x, y = swing[i]
+            else:
+                x, y = stance[i]
+
+            best = find_best_servo_pair(x, y, calib_map)
+
+            servo_targets[leg["hip"]] = best["hip"]
+            servo_targets[leg["knee"]] = best["knee"]
+
+        move(kit, servo_targets, 100)
 
 
 def init_servos(kit):
