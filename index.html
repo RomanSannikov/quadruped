@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Control</title>
+</head>
+<body>
+    <h1>Quadruped Robot Control</h1>
+    <p>Press any arrow key to make the robot trot.</p>
+    <script>
+        document.addEventListener('keydown', function(event) {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                fetch('/move', { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('Trot triggered');
+                        } else {
+                            console.error('Failed to trigger trot');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        });
+    </script>
+</body>
+</html>
