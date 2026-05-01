@@ -32,7 +32,7 @@ class MyHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         global last_request_time, robot_state, legs_position
 
-        if self.path == '/moveForward' or self.path == '/moveBackwards':
+        if self.path == '/moveForward' or self.path == '/moveBackwards' or self.path == '/walkSidewaysLeft' or self.path == '/walkSidewaysRight':
             last_request_time = time.time()
             if robot_state == 'IDLE':
                 legs_position = utils.standup(kit, calib_map, x_start=-20, y_ground=-165)
@@ -42,15 +42,20 @@ class MyHandler(BaseHTTPRequestHandler):
                 return
             robot_state = 'MOVING'
             x_start, x_end = (-20, 20) if self.path == '/moveForward' else (20, -20)
-            # Run trot in a background thread so server doesn't block
-            threading.Thread(target=run_trot, args=(utils.trot, kit, calib_map, x_start, x_end, -165, 30, 5), daemon=True).start()
+            if self.path == '/moveForward' or self.path == '/moveBackwards':
+                # Run trot in a background thread so server doesn't block
+                threading.Thread(target=walk, args=(utils.trot, kit, calib_map, x_start, x_end, -165, 30, 5), daemon=True).start()
+            elif self.path == '/walkSidewaysLeft' or self.path == '/walkSidewaysRight':
+                # Run sideways walk in a background thread so server doesn't block
+                right = (self.path == '/walkSidewaysRight')
+                threading.Thread(target=walk, args=(utils.walk_sideways, kit, calib_map, -20, -165, 30, 5, right), daemon=True).start()
             self.send_response(200)
             self.end_headers()
         else:
             self.send_error(404)
 
 
-def run_trot(func, *args, **kwargs):
+def walk(func, *args, **kwargs):
     global robot_state
 
     func(*args, **kwargs)

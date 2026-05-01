@@ -29,4 +29,4 @@ else: # User defined
         n, angle = item.popitem()
         kit.servo[n].angle = angle
         print(f"{n}: {round(kit.servo[n].angle)}")
-        time.sleep(0.3)
+        # time.sleep(0.05)

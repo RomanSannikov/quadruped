@@ -26,13 +26,13 @@ SERVO_CAL = {
     11:(-1, ABDUCTION_DEFAULT_ANGLE - 10),
 
     # right legs (mirrored)
-    3: (-1, HIP_DEFAULT_ANGLE + 5),
-    4: (-1, KNEE_DEFAULT_ANGLE + 3),
-    5: ( 1, ABDUCTION_DEFAULT_ANGLE),
+    3: (-1, HIP_DEFAULT_ANGLE + 10),
+    4: (-1, KNEE_DEFAULT_ANGLE),
+    5: (-1, ABDUCTION_DEFAULT_ANGLE),
 
-    6: (-1, HIP_DEFAULT_ANGLE + 5),
+    6: (-1, HIP_DEFAULT_ANGLE - 10),
     7: (-1, KNEE_DEFAULT_ANGLE - 5),
-    8: (-1, ABDUCTION_DEFAULT_ANGLE),
+    8: ( 1, ABDUCTION_DEFAULT_ANGLE),
 }
 
 
@@ -267,6 +267,140 @@ def trot(kit, calib_map, x_start, x_end, y_ground, lift, samples=15):
             servo_targets[leg["knee"]] = best["knee"]
 
         move(kit, servo_targets, 100)
+
+
+def turn_in_place(kit, calib_map, x_start, x_end, y_ground, lift, samples=15, clockwise=True):
+    """Rotate the robot in place using a trot gait.
+
+    Left and right legs move in opposite directions to create a turning torque.
+    Set clockwise=True for clockwise rotation, False for counter-clockwise.
+    """
+    legs = [
+        {"hip": 0,  "knee": 1},   # left front
+        {"hip": 3,  "knee": 4},   # right front
+        {"hip": 6,  "knee": 7},   # right back
+        {"hip": 9,  "knee": 10},  # left back
+    ]
+
+    group_A = [0, 2]
+    group_B = [1, 3]
+
+    if clockwise:
+        # Left legs swing forward, right legs swing backward
+        left_swing = swing_trajectory(x_start, x_end, y_ground, lift, samples=samples)
+        left_stance = stance_trajectory(x_end, x_start, y_ground, samples=samples)
+        right_swing = swing_trajectory(x_end, x_start, y_ground, lift, samples=samples)
+        right_stance = stance_trajectory(x_start, x_end, y_ground, samples=samples)
+    else:
+        # Left legs swing backward, right legs swing forward
+        left_swing = swing_trajectory(x_end, x_start, y_ground, lift, samples=samples)
+        left_stance = stance_trajectory(x_start, x_end, y_ground, samples=samples)
+        right_swing = swing_trajectory(x_start, x_end, y_ground, lift, samples=samples)
+        right_stance = stance_trajectory(x_end, x_start, y_ground, samples=samples)
+
+    def _traj(leg_id, phase):
+        is_left = leg_id in (0, 3)
+        if phase == "swing":
+            return left_swing if is_left else right_swing
+        return left_stance if is_left else right_stance
+
+    # --- Phase A ---
+    for i in range(len(left_swing)):
+        servo_targets = {}
+        for leg_id, leg in enumerate(legs):
+            x, y = _traj(leg_id, "swing" if leg_id in group_A else "stance")[i]
+            best = find_best_servo_pair(x, y, calib_map)
+            servo_targets[leg["hip"]] = best["hip"]
+            servo_targets[leg["knee"]] = best["knee"]
+        move(kit, servo_targets, 100)
+
+    # --- Phase B ---
+    for i in range(len(left_swing)):
+        servo_targets = {}
+        for leg_id, leg in enumerate(legs):
+            x, y = _traj(leg_id, "swing" if leg_id in group_B else "stance")[i]
+            best = find_best_servo_pair(x, y, calib_map)
+            servo_targets[leg["hip"]] = best["hip"]
+            servo_targets[leg["knee"]] = best["knee"]
+        move(kit, servo_targets, 100)
+
+
+def walk_sideways(kit, calib_map, x_start, y_ground, lift, samples=15, right=True):
+    """Walk sideways using abduction servos.
+
+    To go right:
+    1. Tilt body left
+    2. Front right leg steps out
+    3. Rear right leg steps out
+    4. Tilt body right
+    5. Front left leg steps in
+    6. Rear left leg steps in
+    7. Return to default abduction
+    """
+    ABDUCTION_OFFSET = 15
+
+    # Stand up
+    best = find_best_servo_pair(x_start, y_ground, calib_map)
+    hip_angle = best["hip"]
+    knee_angle = best["knee"]
+    legs_position = {
+        0: hip_angle, 1: knee_angle,
+        3: hip_angle, 4: knee_angle,
+        6: hip_angle, 7: knee_angle,
+        9: hip_angle, 10: knee_angle,
+    }
+    move(kit, legs_position, 100)
+
+    left_front = {"hip": 0, "knee": 1, "abd": 2}
+    right_front = {"hip": 3, "knee": 4, "abd": 5}
+    right_back = {"hip": 6, "knee": 7, "abd": 8}
+    left_back = {"hip": 9, "knee": 10, "abd": 11}
+
+    def _tilt_body(left_offset, right_offset):
+        targets = {
+            left_front["abd"]: SERVO_CAL[2][1] + left_offset,
+            left_back["abd"]: SERVO_CAL[11][1] + left_offset,
+            right_front["abd"]: SERVO_CAL[5][1] + right_offset,
+            right_back["abd"]: SERVO_CAL[8][1] + right_offset,
+        }
+        move(kit, targets, 100)
+
+    def _step_leg(leg, abd_target):
+        servos = {leg["knee"]: knee_angle - lift,
+                  leg["knee"]: knee_angle,
+                  leg["abd"]: abd_target}
+        move(kit, servos, 100)
+        # # Lift
+        # move(kit, {leg["knee"]: knee_angle - lift}, 100)
+        # # Move abduction
+        # move(kit, {leg["abd"]: abd_target}, 100)
+        # # Lower
+        # move(kit, {leg["knee"]: knee_angle}, 100)
+
+    if right:
+        # Go right
+        _tilt_body(-ABDUCTION_OFFSET, +ABDUCTION_OFFSET)                       # 1. tilt left
+        _step_leg(right_front, ABDUCTION_DEFAULT_ANGLE + ABDUCTION_OFFSET)     # 2. front right out
+        _step_leg(right_back, ABDUCTION_DEFAULT_ANGLE + ABDUCTION_OFFSET)      # 3. rear right out
+        _tilt_body(-ABDUCTION_OFFSET, +ABDUCTION_OFFSET)                       # 4. tilt right
+        _step_leg(left_front, ABDUCTION_DEFAULT_ANGLE - ABDUCTION_OFFSET)      # 5. front left in
+        _step_leg(left_back, ABDUCTION_DEFAULT_ANGLE - ABDUCTION_OFFSET)       # 6. rear left in
+    else:
+        # Go left
+        _tilt_body(+ABDUCTION_OFFSET, -ABDUCTION_OFFSET)                       # 1. tilt right
+        _step_leg(left_front, ABDUCTION_DEFAULT_ANGLE + ABDUCTION_OFFSET)      # 2. front left out
+        _step_leg(left_back, ABDUCTION_DEFAULT_ANGLE + ABDUCTION_OFFSET)       # 3. rear left out
+        _tilt_body(+ABDUCTION_OFFSET, -ABDUCTION_OFFSET)                       # 4. tilt left
+        _step_leg(right_front, ABDUCTION_DEFAULT_ANGLE - ABDUCTION_OFFSET)     # 5. front right in
+        _step_leg(right_back, ABDUCTION_DEFAULT_ANGLE - ABDUCTION_OFFSET)      # 6. rear right in
+
+    # 7. Return to default abduction
+    move(kit, {
+        2: ABDUCTION_DEFAULT_ANGLE,
+        5: ABDUCTION_DEFAULT_ANGLE,
+        8: ABDUCTION_DEFAULT_ANGLE,
+        11: ABDUCTION_DEFAULT_ANGLE,
+    }, 100)
 
 
 def init_servos(kit):

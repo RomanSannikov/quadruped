@@ -9,7 +9,7 @@
     <p>Press any arrow key to make the robot trot.</p>
     <script>
         document.addEventListener('keydown', function(event) {
-            if (['ArrowUp'].includes(event.key)) {
+            if (['ArrowUp', 'KeyW'].includes(event.code)) {
                 fetch('/moveForward', { method: 'POST' })
                     .then(response => {
                         if (response.ok) {
@@ -19,13 +19,33 @@
                         }
                     })
                     .catch(error => console.error('Error:', error));
-            } else if (['ArrowDown'].includes(event.key)) {
+            } else if (['ArrowDown', 'KeyS'].includes(event.code)) {
                 fetch('/moveBackwards', { method: 'POST' })
                     .then(response => {
                         if (response.ok) {
                             console.log('Trot triggered');
                         } else {
                             console.error('Failed to trigger trot');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            } else if (['ArrowLeft', 'KeyA'].includes(event.code)) {
+                fetch('/walkSidewaysLeft', { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('Walk sideways left triggered');
+                        } else {
+                            console.error('Failed to trigger walk sideways left');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            } else if (['ArrowRight', 'KeyD'].includes(event.code)) {
+                fetch('/walkSidewaysRight', { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('Walk sideways right triggered');
+                        } else {
+                            console.error('Failed to trigger walk sideways right');
                         }
                     })
                     .catch(error => console.error('Error:', error));

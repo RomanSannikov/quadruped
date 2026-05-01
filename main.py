@@ -21,12 +21,22 @@ def main():
 
     for _ in range(steps):
         # forward
-        utils.trot(kit, calib_map, x_start, x_end, y_ground, lift, samples)
+        # utils.trot(kit, calib_map, x_start, x_end, y_ground, lift, samples)
         # utils.crawl(kit, calib_map, x_start, x_end, y_ground, lift, samples)
 
         # backwards
         # utils.trot(kit, calib_map, x_end, x_start, y_ground, lift, samples)
         # utils.crawl(kit, calib_map, x_end, x_start, y_ground, lift, samples)
+
+        # rotate clockwise in place
+        utils.turn_in_place(kit, calib_map, x_start, x_end, y_ground, lift, samples, clockwise=True)
+
+        # rotate counter-clockwise in place
+        # utils.turn_in_place(kit, calib_map, x_start, x_end, y_ground, lift, samples, clockwise=False)
+
+        # walk sideways using abduction only (fixed X, Y lift only)
+        # utils.walk_sideways(kit, calib_map, x_start, y_ground, lift, samples, right=True)
+        # utils.walk_sideways(kit, calib_map, x_start, y_ground, lift, samples, right=False)
 
     # Back to default
     time.sleep(1)
