@@ -9,8 +9,18 @@
     <p>Press any arrow key to make the robot trot.</p>
     <script>
         document.addEventListener('keydown', function(event) {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-                fetch('/move', { method: 'POST' })
+            if (['ArrowUp'].includes(event.key)) {
+                fetch('/moveForward', { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('Trot triggered');
+                        } else {
+                            console.error('Failed to trigger trot');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            } else if (['ArrowDown'].includes(event.key)) {
+                fetch('/moveBackwards', { method: 'POST' })
                     .then(response => {
                         if (response.ok) {
                             console.log('Trot triggered');
