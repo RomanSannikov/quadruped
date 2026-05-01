@@ -20,8 +20,13 @@ def main():
     time.sleep(1)
 
     for _ in range(steps):
+        # forward
         utils.trot(kit, calib_map, x_start, x_end, y_ground, lift, samples)
         # utils.crawl(kit, calib_map, x_start, x_end, y_ground, lift, samples)
+
+        # backwards
+        # utils.trot(kit, calib_map, x_end, x_start, y_ground, lift, samples)
+        # utils.crawl(kit, calib_map, x_end, x_start, y_ground, lift, samples)
 
     # Back to default
     time.sleep(1)
