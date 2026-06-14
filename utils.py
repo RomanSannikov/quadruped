@@ -21,7 +21,7 @@ SERVO_CAL = {
     1: ( 1, KNEE_DEFAULT_ANGLE),
     2: ( 1, ABDUCTION_DEFAULT_ANGLE),
 
-    9: ( 1, HIP_DEFAULT_ANGLE - 3),
+    9: ( 1, HIP_DEFAULT_ANGLE - 7),
     10:( 1, KNEE_DEFAULT_ANGLE - 5),
     11:(-1, ABDUCTION_DEFAULT_ANGLE - 10),
 
@@ -75,6 +75,11 @@ def move(kit, servo_targets, speed):
 
     # Read current hardware angles
     current = {n: kit.servo[n].angle for n in servo_targets}
+
+    # Check if the angles are read
+    if any(angle is None for angle in current.values()):
+        print("Error: couldn't read current servo angles.")
+        return
     
     # Convert logical targets to hardware angles
     # targets = {n: to_hardware(n, servo_targets[n]) for n in servo_targets}

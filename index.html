@@ -2,11 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot Control</title>
 </head>
 <body>
     <h1>Quadruped Robot Control</h1>
-    <p>Press any arrow key to make the robot trot.</p>
+    <div>
+        <h2>Live Camera</h2>
+        <img src="/video_feed" alt="Live camera feed" style="width:100%;max-width:640px;height:auto;" />
+        <div>FPS: <span id="fps">--</span></div>
+        <div><button id="toggle-det" type="button">Disable object recognition</button></div>
+    </div>
+
+    <div>
+        <h2>Robot Controls</h2>
+        <p>Use the arrow keys or the buttons below to move the robot.</p>
+        <div>
+            <button id="btn-forward" type="button">Forward</button>
+            <button id="btn-backward" type="button">Backward</button>
+            <button id="btn-left" type="button">Left</button>
+            <button id="btn-right" type="button">Right</button>
+        </div>
+    </div>
     <script>
         document.addEventListener('keydown', function(event) {
             if (['ArrowUp', 'KeyW'].includes(event.code)) {
@@ -50,6 +67,59 @@
                     })
                     .catch(error => console.error('Error:', error));
             }
+        });
+
+        // Poll server for FPS stats
+        async function updateStats() {
+            try {
+                const res = await fetch('/stats');
+                if (!res.ok) return;
+                const data = await res.json();
+                const el = document.getElementById('fps');
+                if (el && data.fps !== undefined) {
+                    el.textContent = data.fps;
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+        setInterval(updateStats, 500);
+        // Toggle detection from the page
+        async function toggleDet() {
+            try {
+                const res = await fetch('/toggle_detection');
+                if (!res.ok) return;
+                const data = await res.json();
+                const btn = document.getElementById('toggle-det');
+                if (!btn) return;
+                btn.textContent = data.detection_enabled ? 'Disable object recognition' : 'Enable object recognition';
+            } catch (e) {
+                // ignore
+            }
+        }
+        document.getElementById('toggle-det').addEventListener('click', toggleDet);
+
+        function postMove(path) {
+            fetch(path, { method: 'POST' })
+                .then(response => {
+                    if (!response.ok) {
+                        console.error('Failed to trigger robot action');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        document.getElementById('btn-forward').addEventListener('click', function () {
+            postMove('/moveForward');
+        });
+        document.getElementById('btn-backward').addEventListener('click', function () {
+            postMove('/moveBackwards');
+        });
+        document.getElementById('btn-left').addEventListener('click', function () {
+            postMove('/walkSidewaysLeft');
+        });
+        document.getElementById('btn-right').addEventListener('click', function () {
+            postMove('/walkSidewaysRight');
         });
     </script>
 </body>
