@@ -125,7 +125,9 @@ class Camera:
                         font = ImageFont.load_default()
                         for box, conf, cls in zip(xyxy, confs, clss):
                             x1, y1, x2, y2 = map(int, box)
-                            label = yolo_model.names[int(cls)]
+                            class_id = int(cls)
+                            label = yolo_model.names[class_id]
+                            box_color = 'red' if class_id == 0 else 'blue'
                             label_conf = f"{label} {conf:.2f}"
                             # Measure text size
                             left_t, top_t, right_t, bottom_t = draw.textbbox((0, 0), label_conf, font=font)
@@ -154,11 +156,11 @@ class Camera:
                             x2 = max(0, min(int(x2), img_w - 1))
                             y2 = max(0, min(int(y2), img_h - 1))
                             # Draw box
-                            draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
+                            draw.rectangle([x1, y1, x2, y2], outline=box_color, width=2)
                             # Draw label background and text
                             label_bg_x2 = min(img_w, x1 + text_w + pad)
                             label_bg_y2 = min(img_h, label_y1 + text_h + pad)
-                            draw.rectangle([x1, label_y1, label_bg_x2, label_bg_y2], fill='red')
+                            draw.rectangle([x1, label_y1, label_bg_x2, label_bg_y2], fill=box_color)
                             draw.text((x1 + 1, label_y1 + 1), label_conf, fill='white', font=font)
                         # update detection counter
                         with self.stats_lock:
