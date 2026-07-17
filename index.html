@@ -11,7 +11,10 @@
         <h2>Live Camera</h2>
         <img src="/video_feed" alt="Live camera feed" style="width:100%;max-width:640px;height:auto;" />
         <div>FPS: <span id="fps">--</span></div>
-        <div><button id="toggle-det" type="button">Disable object recognition</button></div>
+        <div>
+            <button id="toggle-det" type="button">Disable object recognition</button>
+            <button id="capture-image" type="button" aria-live="polite">Capture image</button>
+        </div>
     </div>
 
     <div>
@@ -98,6 +101,31 @@
             }
         }
         document.getElementById('toggle-det').addEventListener('click', toggleDet);
+
+        async function captureImage() {
+            const btn = document.getElementById('capture-image');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const res = await fetch('/capture_image', { method: 'POST' });
+                if (!res.ok) {
+                    throw new Error(`Capture failed with status ${res.status}`);
+                }
+                const data = await res.json();
+                btn.textContent = 'Image saved';
+                btn.title = `Saved as captures/${data.filename}`;
+            } catch (error) {
+                btn.textContent = 'Save failed';
+                console.error('Error:', error);
+            } finally {
+                setTimeout(function () {
+                    btn.textContent = 'Capture image';
+                    btn.disabled = false;
+                }, 1500);
+            }
+        }
+        document.getElementById('capture-image').addEventListener('click', captureImage);
 
         function postMove(path) {
             fetch(path, { method: 'POST' })

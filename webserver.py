@@ -6,11 +6,15 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import json
 import queue
+from pathlib import Path
 
 from picamera2 import Picamera2
 from ultralytics import YOLO
 
 import utils
+
+
+CAPTURE_DIR = Path(__file__).resolve().parent / 'captures'
 
 
 class Camera:
@@ -63,6 +67,18 @@ class Camera:
     def get_latest_frame(self):
         with self.frame_lock:
             return self.latest_frame
+
+
+    def save_latest_frame(self):
+        frame = self.get_latest_frame()
+        if frame is None:
+            raise RuntimeError('no camera frame available')
+
+        CAPTURE_DIR.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime('%Y%m%d_%H%M%S')
+        capture_path = CAPTURE_DIR / f'capture_{timestamp}_{time.time_ns() % 1_000_000_000:09d}.jpg'
+        capture_path.write_bytes(frame)
+        return capture_path
 
 
     def get_latest_stats(self):
@@ -243,7 +259,23 @@ class HTTPServer(BaseHTTPRequestHandler):
 
 
     def do_POST(self):
-        if robot and robot.move(self.path):
+        if self.path == '/capture_image':
+            try:
+                capture_path = camera.save_latest_frame()
+                payload = json.dumps({
+                    'saved': True,
+                    'filename': capture_path.name,
+                }).encode('utf-8')
+                self.send_response(201)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+            except RuntimeError as error:
+                self.send_error(503, str(error))
+            except OSError:
+                self.send_error(500, 'failed to save image')
+        elif robot and robot.move(self.path):
             self.send_response(200)
             self.end_headers()
         else:
