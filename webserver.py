@@ -290,6 +290,7 @@ class Robot:
         self.robot_state = 'IDLE'
         self.last_request_time = time.time()
         self.legs_position = None
+        self.state_lock = threading.Lock()
 
 
     def walk(self, func, *args, **kwargs):
@@ -313,13 +314,30 @@ class Robot:
 
 
     def move(self, movement) -> bool:
-        self.last_request_time = time.time()
-        if self.robot_state == 'IDLE':
-            self.legs_position = utils.standup(self.kit, self.calib_map, x_start=-20, y_ground=-165)
-            self.robot_state = 'STANDING'
-        elif self.robot_state == 'MOVING':
-            return True
-        self.robot_state = 'MOVING'
+        valid_movements = (
+            '/moveForward',
+            '/moveBackwards',
+            '/walkSidewaysLeft',
+            '/walkSidewaysRight',
+        )
+        if movement not in valid_movements:
+            return False
+
+        with self.state_lock:
+            self.last_request_time = time.time()
+            if self.robot_state == 'MOVING':
+                return True
+
+            should_stand_up = self.robot_state == 'IDLE'
+            self.robot_state = 'MOVING'
+
+        if should_stand_up:
+            self.legs_position = utils.standup(
+                self.kit,
+                self.calib_map,
+                x_start=-20,
+                y_ground=-165,
+            )
         x_start, x_end = (-20, 20) if movement == '/moveForward' else (20, -20)
         if movement == '/moveForward' or movement == '/moveBackwards':
             # Run trot in a background thread so server doesn't block
